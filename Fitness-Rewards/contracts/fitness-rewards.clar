@@ -105,7 +105,7 @@
       goals: goals,
       total-points: u0,
       tokens-earned: u0,
-      joined-at: block-height
+      joined-at: burn-block-height
     })
     (ok true)
   )
@@ -140,7 +140,7 @@
         (goal-id (+ (var-get goal-counter) u1)))
     
     (asserts! (> target-value u0) (err u906))
-    (asserts! (> deadline block-height) (err u907))
+    (asserts! (> deadline burn-block-height) (err u907))
     
     (map-set fitness-goals goal-id {
       user: tx-sender,
@@ -221,8 +221,8 @@
         prize-pool: prize-pool,
         participants: u0,
         max-participants: max-participants,
-        start-time: block-height,
-        end-time: (+ block-height duration),
+        start-time: burn-block-height,
+        end-time: (+ burn-block-height duration),
         active: true
       })
       
@@ -238,10 +238,10 @@
     
     (asserts! (get active challenge) err-challenge-not-found)
     (asserts! (< (get participants challenge) (get max-participants challenge)) (err u908))
-    (asserts! (< block-height (get end-time challenge)) (err u909))
+    (asserts! (< burn-block-height (get end-time challenge)) (err u909))
     
     (map-set challenge-participants {challenge-id: challenge-id, user: tx-sender} {
-      joined-at: block-height,
+      joined-at: burn-block-height,
       current-progress: u0,
       completed: false,
       rank: u0
@@ -260,7 +260,7 @@
         (participation (unwrap! (get-challenge-participation challenge-id tx-sender) err-unauthorized)))
     
     (asserts! (get active challenge) err-challenge-not-found)
-    (asserts! (< block-height (get end-time challenge)) (err u909))
+    (asserts! (< burn-block-height (get end-time challenge)) (err u909))
     
     (map-set challenge-participants {challenge-id: challenge-id, user: tx-sender} 
              (merge participation {current-progress: progress}))
@@ -306,5 +306,27 @@
     (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
     (var-set reward-pool (+ (var-get reward-pool) amount))
     (ok true)
+  )
+)
+(define-public (withdraw-funds (amount uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (>= (var-get reward-pool) amount) err-insufficient-rewards)
+    (try! (stx-transfer? amount tx-sender (as-contract contract-owner)))
+    (var-set reward-pool (- (var-get reward-pool) amount))
+    (ok true)
+  )
+)
+(define-public (end-challenge (challenge-id uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (let ((challenge (unwrap! (get-fitness-challenge challenge-id) err-challenge-not-found)))
+      (asserts! (get active challenge) err-challenge-not-found)
+      (map-set fitness-challenges challenge-id (merge challenge {active: false}))
+      ;; Distribute rewards to participants
+      ;; NOTE: Clarity does not support iteration over map entries within a contract.
+      ;; Reward distribution should be handled by calling a separate function for each participant.
+      (ok true)
+    )
   )
 )
