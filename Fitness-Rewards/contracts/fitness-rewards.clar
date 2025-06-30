@@ -97,35 +97,41 @@
 )
 
 (define-public (create-user-profile (name (string-ascii 100)) (age uint) (fitness-level (string-ascii 20)) (goals (string-ascii 200)))
-  (map-set user-profiles tx-sender {
-    name: name,
-    age: age,
-    fitness-level: fitness-level,
-    goals: goals,
-    total-points: u0,
-    tokens-earned: u0,
-    joined-at: block-height
-  })
-  (ok true)
+  (begin
+    (map-set user-profiles tx-sender {
+      name: name,
+      age: age,
+      fitness-level: fitness-level,
+      goals: goals,
+      total-points: u0,
+      tokens-earned: u0,
+      joined-at: block-height
+    })
+    (ok true)
+  )
 )
 
 (define-public (register-trainer (name (string-ascii 100)) (certification (string-ascii 100)) (specialization (string-ascii 100)) (rate uint))
-  (map-set fitness-trainers tx-sender {
-    name: name,
-    certification: certification,
-    specialization: specialization,
-    hourly-rate: rate,
-    rating: u0,
-    verified: false
-  })
-  (ok true)
+  (begin
+    (map-set fitness-trainers tx-sender {
+      name: name,
+      certification: certification,
+      specialization: specialization,
+      hourly-rate: rate,
+      rating: u0,
+      verified: false
+    })
+    (ok true)
+  )
 )
 
 (define-public (verify-trainer (trainer principal))
-  (asserts! (is-eq tx-sender contract-owner) err-owner-only)
-  (let ((trainer-info (unwrap! (get-trainer-info trainer) err-unauthorized)))
-    (map-set fitness-trainers trainer (merge trainer-info {verified: true}))
-    (ok true)
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (let ((trainer-info (unwrap! (get-trainer-info trainer) err-unauthorized)))
+      (map-set fitness-trainers trainer (merge trainer-info {verified: true}))
+      (ok true)
+    )
   )
 )
 
@@ -166,10 +172,12 @@
 )
 
 (define-public (verify-activity (user principal) (date uint))
-  (asserts! (is-eq tx-sender contract-owner) err-owner-only)
-  (let ((activity (unwrap! (get-activity-log user date) err-unauthorized)))
-    (map-set activity-logs {user: user, date: date} (merge activity {verified: true}))
-    (ok true)
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (let ((activity (unwrap! (get-activity-log user date) err-unauthorized)))
+      (map-set activity-logs {user: user, date: date} (merge activity {verified: true}))
+      (ok true)
+    )
   )
 )
 
@@ -200,25 +208,27 @@
 )
 
 (define-public (create-challenge (name (string-ascii 100)) (description (string-ascii 300)) (challenge-type (string-ascii 50)) (target uint) (duration uint) (prize-pool uint) (max-participants uint))
-  (asserts! (is-eq tx-sender contract-owner) err-owner-only)
-  (let ((challenge-id (+ (var-get challenge-counter) u1)))
-    
-    (map-set fitness-challenges challenge-id {
-      name: name,
-      description: description,
-      challenge-type: challenge-type,
-      target-value: target,
-      duration: duration,
-      prize-pool: prize-pool,
-      participants: u0,
-      max-participants: max-participants,
-      start-time: block-height,
-      end-time: (+ block-height duration),
-      active: true
-    })
-    
-    (var-set challenge-counter challenge-id)
-    (ok challenge-id)
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (let ((challenge-id (+ (var-get challenge-counter) u1)))
+      
+      (map-set fitness-challenges challenge-id {
+        name: name,
+        description: description,
+        challenge-type: challenge-type,
+        target-value: target,
+        duration: duration,
+        prize-pool: prize-pool,
+        participants: u0,
+        max-participants: max-participants,
+        start-time: block-height,
+        end-time: (+ block-height duration),
+        active: true
+      })
+      
+      (var-set challenge-counter challenge-id)
+      (ok challenge-id)
+    )
   )
 )
 
@@ -291,8 +301,10 @@
 )
 
 (define-public (fund-reward-pool (amount uint))
-  (asserts! (is-eq tx-sender contract-owner) err-owner-only)
-  (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
-  (var-set reward-pool (+ (var-get reward-pool) amount))
-  (ok true)
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
+    (var-set reward-pool (+ (var-get reward-pool) amount))
+    (ok true)
+  )
 )
